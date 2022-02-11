@@ -77,7 +77,7 @@ class AllDamageDealt(TraditionalStat):
         requirement_col = ['HeroDamageDealt', 'BarrierDamageDealt']
         ready_col = self.idx_col + requirement_col
         df_init = input_df[ready_col]
-
+        
         return df_init
     
     def define_df_stat(self):
@@ -125,17 +125,16 @@ class HealingReceived(TraditionalStat):
 
     def ready_df_init(self):
         input_df = self.input_df.reset_index()
-        
         requirement_col = ['HealingReceived']
         ready_col = self.idx_col + requirement_col
         df_init = input_df[ready_col]
-
         return df_init
     
     def define_df_stat(self):
         df_init = self.ready_df_init()
 
-        df_stat = df_init.groupby(by=self.idx_col).sum().groupby([x for x in self.idx_col if x != 'Timestamp']).diff().fillna(0).groupby(level='Player').cumsum().reset_index()
+        df_stat = df_init.groupby(by=self.idx_col).sum()
+        df_stat = df_stat.groupby([x for x in self.idx_col if x != 'Timestamp']).diff().fillna(0).groupby(level='Player').cumsum().reset_index()
 
         return df_stat
     
@@ -179,7 +178,6 @@ class Cooldown1Percent(TraditionalStat):
         for hero in hero_list:
             hero_col = df_init[df_init['Hero'] == hero]
             hero_col = hero_col.copy() # make a copy to get rid of SetWithCopy Warning
-
             max_cooldown = hero_col['Cooldown1'].max().max()
             if max_cooldown == 0:
                 max_cooldown = 1
@@ -230,7 +228,6 @@ class Cooldown2Percent(TraditionalStat):
         for hero in hero_list:
             hero_col = df_init[df_init['Hero'] == hero]
             hero_col = hero_col.copy() # make a copy to get rid of SetWithCopy Warning
-
             max_cooldown = hero_col['Cooldown2'].max().max()
             if max_cooldown == 0:
                 max_cooldown = 1
@@ -281,7 +278,6 @@ class CooldownSecondaryFirePercent(TraditionalStat):
         for hero in hero_list:
             hero_col = df_init[df_init['Hero'] == hero]
             hero_col = hero_col.copy() # make a copy to get rid of SetWithCopy Warning
-
             max_cooldown = hero_col['CooldownSecondaryFire'].max().max()
             if max_cooldown == 0:
                 max_cooldown = 1
@@ -423,7 +419,6 @@ class NumAlive(TraditionalStat):
     
     def define_df_stat(self):
         df_init = self.ready_df_init()
-
         # NumAlive of each team
         df_player_alive = df_init.groupby(by=[x for x in self.idx_col if x not in ['Hero']]).mean()
         df_player_alive.loc[df_player_alive['IsAlive']<1, 'IsAlive'] = 0 # replace to 0 if IsAlive < 1. This is required where a player change hero in one second.

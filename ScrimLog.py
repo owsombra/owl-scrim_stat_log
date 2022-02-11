@@ -6,24 +6,28 @@ from AdvancedStat import *
 from TeamfightDetector import *
 from PeriEventTimeHistogram import *
 from MySQLConnection import *
-from sqlalchemy import exc 
 from MapNameList import *
+from sqlalchemy import exc, create_engine
+from mysql_auth import mysql_auth
 
 class ScrimLog():
-    def __init__(self, csvname=None):
-        if csvname is None:
+    def __init__(self, teamname=None, tablename=None):
+        if tablename is None or teamname is None:
             pass 
         else:
-            self.csvname = csvname
-            self.match_id = csvname[0:11] # match_id: '(yyyymmdd)_(scrimNum)' (e.g. 20200318_02)
+            self.teamname = teamname
+            self.rawdb_dbname = teamname + '_Rawdb'
+            self.tablename = tablename
+            self.match_id = tablename[0:11] # match_id: '(yyyymmdd)_(scrimNum)' (e.g. 20200318_02)
             # define num_map
-            mapname = csvname.split('_')[3].split('.')[0]
+            mapname = tablename.split('_')[3].split('.')[0]
             if mapname in mapnamelist:
                 self.num_map = 1
             else: 
                 self.num_map = mapname[-1]
-            self.set_directory()
-            self.set_df_input()
+            #self.set_directory()
+            #self.set_df_input()
+            self.set_table_df_list(tablename)
             self.set_index()
             self.set_WorkshopStat()
             self.set_TraditionalStat()
@@ -41,7 +45,57 @@ class ScrimLog():
 
     def set_df_input(self):
         self.df_input = pd.read_csv(self.filepath)
+        
+    def set_table_df_list(self, tablename):
+        db_login = mysql_auth.auth_info
+        db_conn = pymysql.connect(host = db_login['hostname'], port = int(db_login['port']), user = db_login['username'], passwd = db_login['pwd'], db = self.rawdb_dbname)
+        table_df = pd.read_sql(
+        sql=f"SELECT * FROM `{tablename}` order by Timestamp asc",
+        con=db_conn,
+        )
+        del table_df['id']
+        db_conn.close()
+        
+        #return table_df_list    
+        table_df = table_df.astype({
+            'HeroDamageDealt': 'float',
+            'BarrierDamageDealt': 'float',
+            'DamageBlocked': 'float',
+            'DamageTaken': 'float',
+            'Deaths': 'int',
+            'Eliminations': 'int',
+            'FinalBlows': 'int',
+            'EnvironmentalDeaths': 'int',
+            'EnvironmentalKills': 'int',
+            'HealingDealt': 'float',
+            'ObjectiveKills': 'int',
+            'SoloKills': 'int',
+            'UltimatesEarned': 'int',
+            'UltimatesUsed': 'int',
+            'UltimateCharge': 'int',
+            'Cooldown1': 'float',
+            'Cooldown2': 'float',
+            'CooldownSecondaryFire': 'float',
+            'CooldownCrouching': 'float',
+            'IsAlive': 'int',
+            'MaxHealth': 'float',
+            'Health': 'float',
+            'DefensiveAssists': 'int',
+            'OffensiveAssists': 'int',
+            'IsBurning': 'int',
+            'IsKnockedDown': 'int',
+            'IsAsleep': 'int',
+            'IsFrozen': 'int',
+            'IsUnkillable': 'int',
+            'IsInvincible': 'int',
+            'IsRooted': 'int',
+            'IsStunned': 'int',
+            'IsHacked': 'int',
+            'HealingReceived': 'float'
+        })
 
+        self.df_input = table_df
+        
     def set_index(self):
         # df_init
         self.df_init = self.df_input 
@@ -53,10 +107,11 @@ class ScrimLog():
         self.df_init['num_map'] = self.num_map
 
         # team name
-        NYE_alt_names = ['NYXL', 'Team 1', '1팀', 'New York Excelsior', 'New York']
+        #NYE_alt_names = ['NYXL', 'Team 1', '1팀', 'New York Excelsior', 'New York']
         team_one_name = self.df_init['Team'].unique()[0]
         team_two_name = self.df_init['Team'].unique()[1]
 
+        '''
         if team_one_name == 'NYE':
             pass
         elif team_one_name in NYE_alt_names:
@@ -71,20 +126,21 @@ class ScrimLog():
             team_two_name = 'NYE'
         else:
             raise Exception('NYE is not designated as Team 1. Check the Team names')
+        '''
         
         self.team_one_name = team_one_name
         self.team_two_name = team_two_name
-
+        
         # idx_col
         self.idx_col = ['MatchId', 'num_map', 'Map', 'Section', 'Timestamp', 'Team', 'RoundName', 'Point', 'Player', 'Hero']
 
         # text_based col 
-        self.text_based_col = ['Position', 'DeathByHero', 'DeathByAbility', 'DeathByPlayer', 'Resurrected', 'DuplicatedHero', 'DuplicateStatus']
+        self.text_based_col = ['Position', 'DeathByHero', 'DeathByAbility', 'DeathByPlayer', 'Resurrected', 'DuplicatedHero', 'DuplicateStatus', 'FacingDirection', 'Team1Player1InViewAngle','Team1Player2InViewAngle','Team1Player3InViewAngle','Team1Player4InViewAngle','Team1Player5InViewAngle','Team2Player1InViewAngle','Team2Player2InViewAngle','Team2Player3InViewAngle','Team2Player4InViewAngle','Team2Player5InViewAngle']
 
     def set_WorkshopStat(self):
         df_WorkshopStat = self.df_init.set_index(self.idx_col)
         self.df_text_based_col = df_WorkshopStat[self.text_based_col]
-        self.df_WorkshopStat = df_WorkshopStat.drop(columns=self.text_based_col)
+        self.df_WorkshopStat = df_WorkshopStat.drop(columns=self.text_based_col)        
     
     def set_TraditionalStat(self):
 
@@ -106,10 +162,11 @@ class ScrimLog():
         df_TraditionalStat = HealthPercent(df_TraditionalStat).get_df_result() # Health column 추가되면 진행
         # NumAlive
         df_TraditionalStat = NumAlive(df_TraditionalStat).get_df_result()
-
         # dx
         '''
-        현재 스크림 워크샵이 영웅별로 스탯을 누적해주는 것이 아니라 플레이어 별로 스탯을 누적해주기 때문에 선수가 도중에 영웅을 바꿀 경우 diff() 함수에서 문제가 발생 --> `hero_col` 따로 빼서 diff() 구하고 나중에 merge로 해결
+        현재 스크림 워크샵이 영웅별로 스탯을 누적해주는 것이 아니라 플레이어 별로 스탯을 누적해주기 때문에 
+        선수가 도중에 영웅을 바꿀 경우 diff() 함수에서 문제가 발생 
+        --> `hero_col` 따로 빼서 diff() 구하고 나중에 merge로 해결
         '''
         def diff_stat(df_input=None):
             diff_stat_list = [] # define stat names to diff()
@@ -119,8 +176,7 @@ class ScrimLog():
             df_group = df_init.groupby(by=grouping).sum()
             dx = df_group.groupby([x for x in grouping if x != 'Timestamp']).diff().fillna(0)
             df_merge = pd.merge(df_group, dx, how='outer', left_index=True, right_index=True, suffixes=('', '/s'))
-            df_merge = pd.merge(df_merge, hero_col, how='outer', left_index=True, right_index=True) # add hero_col
-
+            df_merge = pd.merge(df_merge, hero_col, how='outer', left_index=True, right_index=True) # add hero_co
             return df_merge
         
         # calculate dx table and merge
@@ -128,32 +184,29 @@ class ScrimLog():
 
         # indexing
         df_TraditionalStat = df_TraditionalStat.groupby(by=self.idx_col).max()
-
+        
         self.df_TraditionalStat = df_TraditionalStat
 
     def set_AdvancedStat(self):
         # RCP
         df_AdvancedStat = RCPv1(self.df_TraditionalStat).get_df_result()
-        # FB_value
+        # FB_value         
         df_AdvancedStat = FBValue(df_AdvancedStat).get_df_result()
         # Death_risk
         df_AdvancedStat = DeathRisk(df_AdvancedStat).get_df_result()
         # New AdvancedStat here
-
         # indexing
         df_AdvancedStat = df_AdvancedStat.groupby(by=self.idx_col).max()
-
+        
         self.df_AdvancedStat = df_AdvancedStat
     
     def set_TeamfightDetector(self):
         df_TFStat = TeamfightDetector(self.df_AdvancedStat).get_df_result()
-
         # indexing
         df_TFStat = df_TFStat.groupby(by=self.idx_col).max()
         
         # DominanceIndex
         df_TFStat = DIv2(df_TFStat).get_df_result()
-
         self.df_TFStat = df_TFStat
     
     def set_FinalStatIndex(self):
@@ -165,6 +218,7 @@ class ScrimLog():
         def EchoDuplicate(df_FinalStat):
             if 'DuplicateStatus' in df_FinalStat.columns:
                 F_Duplicating = df_FinalStat[['DuplicateStatus']].replace('DUPLICATING', 1).fillna(0)
+                F_Duplicating = df_FinalStat[['DuplicateStatus']].replace('', 0).fillna(0)
                 F_Duplicating.rename(columns={'DuplicateStatus':'IsEchoUlt'}, inplace=True)
                 IsEchoUlt = F_Duplicating.groupby(['MatchId', 'Map', 'Section', 'Player', 'Hero']).diff().fillna(0)
                 result = pd.merge(df_FinalStat, IsEchoUlt, left_index=True, right_index=True)
@@ -183,7 +237,7 @@ class ScrimLog():
     def get_TF_info(self):
         return self.TF_info
 
-    def export_to_csv(self, save_dir='G:/공유 드라이브/NYXL Scrim Log/FinalStat/'):
+    def export_to_csv(self, save_dir='C:/Users/Sqix_OW/Desktop'):
         self.df_FinalStat.to_csv(save_dir + f'FinalStat_{self.csvname}')
     
     def update_FinalStat_to_csv(self, save_dir=r'G:\공유 드라이브\NYXL Scrim Log\FinalStat/'):
@@ -214,49 +268,42 @@ class ScrimLog():
 
         f.close()
 
-    def update_FinalStat_to_sql(self):
-        def get_filelist_all(): 
-            # set path
-            filepath = r'G:/공유 드라이브/NYXL Scrim Log/Csv/'
-            filelist = os.listdir(filepath)
-            csv_filelist = [x for x in filelist if x.endswith('.csv')]
-
-            return csv_filelist
+    def update_FinalStat_to_sql(self, teamname):
+        rawdb_dbname = teamname + '_Rawdb'
+        def get_update_tablelist():
+            sql = """
+                select tablename from toFinalstatTable where isReflected = false;
+            """
+            db_login = mysql_auth.auth_info
+            db_conn = pymysql.connect(host = db_login['hostname'], port = int(db_login['port']), user = db_login['username'], passwd = db_login['pwd'], db = rawdb_dbname)
+            cursor = db_conn.cursor()
+            cursor.execute(sql)
+            result = cursor.fetchall()
+            update_list = []
+            for row_data in result:
+                update_list.append(row_data[0])
             
-        def get_filelist_updated():
-            filepath = r'G:/공유 드라이브/NYXL Scrim Log/Csv/'
-            updated_csv = 'FilesUpdated_FinalStat_MySQL_new.txt'
-            f = open(os.path.join(filepath, updated_csv), 'r+')
-            lines = f.readlines()
-            updated_filelist = []
+            db_conn.close()
+            #return update_list
+            return update_list
 
-            for line in lines:
-                updated_filelist.append(line.replace('\n', ''))
-            
-            f.close()
-            
-            return updated_filelist
-
-        csv_filelist = get_filelist_all() # all filelist
-        updated_filelist = get_filelist_updated() # updated filelist
-
-        # sort files to be updated
-        csv_filelist_to_update = list(set(csv_filelist) - set(updated_filelist))
-        csv_filelist_to_update.sort()
-
-        # export and write
-        filepath = r'G:/공유 드라이브/NYXL Scrim Log/Csv/'
-        updated_csv = 'FilesUpdated_FinalStat_MySQL_new.txt'
-        for filename in csv_filelist_to_update:
-            f = open(os.path.join(filepath, updated_csv), 'a')
-            scrimlog = ScrimLog(filename)
-            df_sql = MySQLConnection(input_df=scrimlog.df_FinalStat.reset_index(), dbname='scrimloganalysis') # reset_index to export to mysql db
-            table_name = scrimlog.csvname.split('.csv')[0] # drop '.csv' as a table_name
+        update_list = get_update_tablelist()
+        db_login = mysql_auth.auth_info
+        rawdb_conn = pymysql.connect(host = db_login['hostname'], port = int(db_login['port']), user = db_login['username'], passwd = db_login['pwd'], db = rawdb_dbname)
+        cursor = rawdb_conn.cursor()
+        for tablename in update_list:
+            scrimlog = ScrimLog(teamname, tablename)
+            df_sql = MySQLConnection(dbname=teamname, input_df=scrimlog.df_FinalStat.reset_index()) # reset_index to export to mysql db
+            check_update_sql = 'update toFinalstatTable set isReflected = True where tablename = \'' + tablename + '\';';
             try: # Insert dataframe into DB except duplicated primary keys
                 df_sql.export_to_db(table_name='finalstat', if_exists='append')
-                f.write(filename+'\n')
-                print(f'File Exported to {df_sql.dbname}: {filename}')
+                cursor.execute(check_update_sql)
+                print(f'File Exported to {df_sql.dbname}: {tablename}')
             except exc.IntegrityError:
-                f.write(filename+'\n')
+                cursor.execute(check_update_sql)
                 print('IntegrigyError')
-            f.close()
+        
+        rawdb_conn.close()
+        
+
+

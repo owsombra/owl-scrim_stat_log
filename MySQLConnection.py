@@ -1,12 +1,13 @@
 import pymysql
 from sqlalchemy import create_engine 
 import pandas as pd 
-import mysql_auth
+from mysql_auth import mysql_auth
 
-NYXLDB_login = mysql_auth.NYXLDB_FinalStat # import NYXLDB_login auth info
+
+dstDB_login = mysql_auth.auth_info # import dstDB_login auth info
 
 class MySQLConnection():
-    def __init__(self, input_df=None, dbname=NYXLDB_login['dbname'], hostname=NYXLDB_login['hostname'], username=NYXLDB_login['username'], pwd=NYXLDB_login['pwd'], port=NYXLDB_login['port']):
+    def __init__(self, dbname, input_df=None, hostname=dstDB_login['hostname'], username=dstDB_login['username'], pwd=dstDB_login['pwd'], port=dstDB_login['port']):
         if input_df is None: 
             pass 
 
@@ -16,7 +17,7 @@ class MySQLConnection():
         self.dbname = dbname
         # create engine
         self.engine = create_engine('mysql+pymysql://' + username + ':' + pwd + '@' + hostname + ':' + str(port) + '/' + dbname , echo=False)
-        
+
     def export_to_db(self, table_name, if_exists='append'):
         table_name = table_name.lower() # MySQL DB에서 table 이름을 자동으로 소문자로 바꿔주기 때문에 'replace' 기능 쓰려면 필수
         self.input_df.to_sql(name=table_name, con=self.engine, schema=self.dbname, if_exists=if_exists) # if_exsits:{'fail', 'replace', 'append'}
@@ -37,3 +38,4 @@ class MySQLConnection():
             table_df.drop(columns='level_0', inplace=True) # drop 'level_0 column
 
         return table_df
+

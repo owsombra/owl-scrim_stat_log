@@ -1,7 +1,7 @@
 mapnamelist = [
     "Dorado",
     "King's Row", 
-    "Kings' Row",
+    "Kings Row",
     "Temple of Anubis",
     "Anubis",
     "Busan",
@@ -26,7 +26,7 @@ mapnamelist = [
 ]
 
 mapname_typocorrection = {
-    "Kings' Row":"King's Row",
+    "Kings Row":"King's Row",
     "Anubis":"Temple of Anubis",
     "Volskaya":"Volskaya Industries",
     "Watchpoint Gibraltar":"Watchpoint: Gibraltar",
