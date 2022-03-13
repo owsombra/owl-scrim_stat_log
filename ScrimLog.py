@@ -294,7 +294,7 @@ class ScrimLog():
         for tablename in update_list:
             scrimlog = ScrimLog(teamname, tablename)
             df_sql = MySQLConnection(dbname=teamname, input_df=scrimlog.df_FinalStat.reset_index()) # reset_index to export to mysql db
-            check_update_sql = 'update toFinalstatTable set isReflected = true where tablename = \'' + tablename + '\';';
+            check_update_sql = 'update toFinalstatTable set isReflected = true where tablename = \"' + tablename + '\";';
             print(check_update_sql)
             try: # Insert dataframe into DB except duplicated primary keys
                 df_sql.export_to_db(table_name='finalstat', if_exists='append')

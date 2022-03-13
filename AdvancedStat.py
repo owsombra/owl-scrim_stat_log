@@ -246,7 +246,6 @@ class DIv2(AdvancedStat):
 
     def ready_df_init(self):
         input_df = self.input_df.reset_index()
-        
         requirement_col = ['TF_RCP_sum', 'TF_duration']
         ready_col = self.idx_col + requirement_col
         df_init = input_df[ready_col]
