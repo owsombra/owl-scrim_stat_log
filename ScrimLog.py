@@ -1,13 +1,13 @@
 import pandas as pd 
-import numpy as np 
 import os 
+import pymysql
 from TraditionalStat import *
 from AdvancedStat import * 
 from TeamfightDetector import *
 from PeriEventTimeHistogram import *
 from MySQLConnection import *
 from MapNameList import *
-from sqlalchemy import exc, create_engine
+from sqlalchemy import exc
 from mysql_auth import mysql_auth
 
 class ScrimLog():
@@ -53,7 +53,7 @@ class ScrimLog():
         sql=f"SELECT * FROM `{tablename}` order by Timestamp asc",
         con=db_conn,
         )
-        del table_df['id']
+        #del table_df['id']
         db_conn.close()
         
         #return table_df_list    
@@ -294,14 +294,17 @@ class ScrimLog():
         for tablename in update_list:
             scrimlog = ScrimLog(teamname, tablename)
             df_sql = MySQLConnection(dbname=teamname, input_df=scrimlog.df_FinalStat.reset_index()) # reset_index to export to mysql db
-            check_update_sql = 'update toFinalstatTable set isReflected = True where tablename = \'' + tablename + '\';';
+            check_update_sql = 'update toFinalstatTable set isReflected = true where tablename = \'' + tablename + '\';';
+            print(check_update_sql)
             try: # Insert dataframe into DB except duplicated primary keys
                 df_sql.export_to_db(table_name='finalstat', if_exists='append')
                 cursor.execute(check_update_sql)
                 print(f'File Exported to {df_sql.dbname}: {tablename}')
             except exc.IntegrityError:
                 cursor.execute(check_update_sql)
-                print('IntegrigyError')
+                print('IntegrityError')
+            finally:
+                rawdb_conn.commit()
         
         rawdb_conn.close()
         

@@ -1,4 +1,3 @@
-import pymysql
 from sqlalchemy import create_engine 
 import pandas as pd 
 from mysql_auth import mysql_auth

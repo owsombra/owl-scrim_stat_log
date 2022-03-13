@@ -1,6 +1,5 @@
 from abc import *
 import pandas as pd 
-import numpy as np
 import Resources
 
 class AdvancedStat(metaclass=ABCMeta):

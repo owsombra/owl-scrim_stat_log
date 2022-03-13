@@ -58,12 +58,9 @@ for i in range(0, len(update_list)):
     export_to_csv(rawdb_data[i], update_list[i])
 
 '''
-import pandas as pd 
-import numpy as np 
-import glob
-from tqdm import tqdm
 from ScrimLog import *
 from PeriEventTimeHistogram import *
 
-teamname = 'NYE'
-scrim_sql = ScrimLog().update_FinalStat_to_sql(teamname)
+teamname = ['New York Excelsior']#, 'Guangzhou Charge']
+for i in range(0,len(teamname)):
+    scrim_sql = ScrimLog().update_FinalStat_to_sql(teamname[i])

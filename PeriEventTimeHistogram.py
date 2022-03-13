@@ -1,12 +1,9 @@
 import pandas as pd 
-import numpy as np 
-import glob
 import os 
 from StatAbbr import *
 from MySQLConnection import *
 from sqlalchemy import exc 
 from MapNameList import * 
-from tqdm import tqdm
 
 class PETH():
     def __init__(self, FinalStatName=None):
@@ -176,7 +173,7 @@ class PETH():
         # export
         filepath = r'G:/공유 드라이브/NYXL Scrim Log/Csv/'
         updated_csv = f'FilesUpdated_{self.stat_name_abbr}_MySQL.txt'
-        for filename in tqdm(filelist_to_update):
+        for filename in filelist_to_update:
             f = open(os.path.join(filepath, updated_csv), 'a')
             file_PETH = PETH(filename)
             file_PETH.set_import_type('sql')

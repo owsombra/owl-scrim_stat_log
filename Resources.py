@@ -1,7 +1,3 @@
-import pandas as pd 
-import numpy as np 
-from dataclasses import dataclass 
-
 UltimateCost : dict = {
     'Songhana' : 319.2, 
     'Tracer' : 1260,
